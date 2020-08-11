@@ -2,13 +2,32 @@
 from splinter import Browser
 from bs4 import BeautifulSoup as soup
 import pandas as pd 
+import datetime as dt 
 
 # Path to chromedriver
 #!which chromedriver
 
-# Set the executable path and initialize the chrome browser in splinter
+# Set the executable path
 executable_path = {'executable_path': '/usr/local/bin/chromedriver'}
-browser = Browser('chrome', **executable_path)
+
+def scrape_all():
+    #  initialize the chrome browser in splinter
+    browser = Browser('chrome', **executable_path, headless=True)
+
+    news_title, news_paragraph = mars_news(browser)
+
+    # Run all scraping functions and store results in dictionary
+    data = {
+        "news_title": news_title,
+        "news_paragraph": news_paragraph,
+        "featured_image": featured_image(browser),
+        "facts": mars_facts(),
+        "last_modified": dt.datetime.now()
+    }
+
+    # end automated browsing session and return data
+    browser.quit()
+    return data
 
 #Function:
 def mars_news(browser):
@@ -25,7 +44,7 @@ def mars_news(browser):
     news_soup = soup(html, 'html.parser')
     slide_elem = news_soup.select_one('ul.item_list li.slide')
 
-# add try/except for error handling 
+    # add try/except for error handling 
     try:
         # Start scraping
         slide_elem.find('div', class_='content_title')
@@ -36,7 +55,8 @@ def mars_news(browser):
         # Use the parent element to find the paragraph text
         news_p = slide_elem.find('div', class_="article_teaser_body").get_text()
         
-    except: AttributeError:
+    except AttributeError:
+
         return None, None
 
     return news_title, news_p
@@ -74,7 +94,7 @@ def featured_image(browser):
 
     # Use the base URL to create an absolute URL
     img_url = f'https://www.jpl.nasa.gov{img_url_rel}'
-    img_url
+    
 
     return img_url
 
@@ -87,6 +107,7 @@ def mars_facts():
 
     except BaseException:
         return None
+
     # Assign columns and set index of dataframe
     df.columns=['description','value']
     df.set_index('description', inplace=True)
@@ -94,5 +115,6 @@ def mars_facts():
     # convert pandas DF to html ready code, add bootstrap
     return df.to_html()
 
-# end automated browsing session
-browser.quit()
+if __name__ == "__main__":
+    # If running as script, print scraped data
+    print(scrape_all())
